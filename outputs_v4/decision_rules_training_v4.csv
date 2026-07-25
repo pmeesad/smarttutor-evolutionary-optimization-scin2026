@@ -1,0 +1,5 @@
+rule,top_k,chunk_tokens,overlap,rerank_depth,context_tokens,training_p95,training_qw,training_qmacro,training_qworst,training_token_work,candidate_pool
+ideal_point,3.0,384.0,0.22,13.0,1024.0,3.071104739469829,0.8737334285987618,0.8592470403127976,0.7807052255260911,12601.65634018744,"unique union of D-NSGA-II and D-SPEA2 fronts, blocks 1-8, 10 matched seeds"
+weighted_quality_floor_0.88,3.0,384.0,0.25,15.0,1024.0,3.1049308824376625,0.8802388059336144,0.867112955185348,0.7962557473401202,14470.686404897826,"unique union of D-NSGA-II and D-SPEA2 fronts, blocks 1-8, 10 matched seeds"
+latency_ceiling_3.25,4.0,384.0,0.19,18.0,1024.0,3.2487420496734396,0.9002294069680963,0.8890894648287535,0.8282383115622906,17050.163544829375,"unique union of D-NSGA-II and D-SPEA2 fronts, blocks 1-8, 10 matched seeds"
+class_protected_0.81,3.0,384.0,0.22,17.0,1024.0,3.1529816397865886,0.8873289659913153,0.8752000205959651,0.8101678664549501,16097.537846523765,"unique union of D-NSGA-II and D-SPEA2 fronts, blocks 1-8, 10 matched seeds"

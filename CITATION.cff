@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "Please cite this software and research evidence package."
+title: "SmartTutor Full-Revision Simulation Benchmark and Experiment Evidence"
+type: software
+version: "4.0.0"
+date-released: "2026-07-25"
+authors:
+  - family-names: "Meesad"
+    given-names: "Phayung"
+    affiliation: "King Mongkut's University of Technology North Bangkok"
+repository-code: "INSERT-GITHUB-REPOSITORY"
+abstract: "Code, synthetic benchmark data, independent reference fronts, multi-seed algorithm runs, scenario analysis, and statistical evidence for the SmartTutor simulation benchmark."
+keywords:
+  - SmartTutor
+  - retrieval-augmented generation
+  - multi-objective optimization
+  - NSGA-II
+  - SPEA2
+  - Sobol sequence
+  - simulation benchmark
+license: MIT

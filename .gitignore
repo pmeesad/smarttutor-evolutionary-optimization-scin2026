@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Build and temporary files
+build/
+dist/
+*.egg-info/
+*.tmp
+*.temp
+*.log
+
+# Large candidate-level evidence is distributed as GitHub release assets
+# and archived in Zenodo. Summary outputs remain tracked in the repository.
+outputs_v4/runs/
+outputs_v4/references/
+
+# Do not commit packaged evidence archives into normal Git history
+outputs_v4/runs/
+outputs_v4/references/
+*.zip
+*.7z
+*.tar
+*.tar.gz

@@ -1,0 +1,46 @@
+{
+  "study_version": "v4-full-revision",
+  "benchmark_blocks": 12,
+  "requests_per_block": 1200,
+  "exact_class_counts": {
+    "factual": 420,
+    "procedural": 360,
+    "conceptual": 240,
+    "troubleshooting": 180
+  },
+  "optimizer_seeds_per_block": 10,
+  "matched_seed_cells": 120,
+  "methods": [
+    "D-NSGA-II",
+    "D-SPEA2",
+    "Sobol",
+    "Random"
+  ],
+  "unique_evaluation_budget": 3000,
+  "initial_design_size": 60,
+  "independent_reference_unique": 250000,
+  "independent_reference_sobol_generated": 524288,
+  "scipy_version": "1.17.0",
+  "numpy_version": "2.3.5",
+  "pandas_version": "2.2.3",
+  "sobol_implementation": {
+    "class": "scipy.stats.qmc.Sobol",
+    "scramble": true,
+    "strategy_documented_by_scipy": "LMS+digital shift",
+    "bits": 30,
+    "optimization": null,
+    "random_base2_m_search": 13,
+    "random_base2_m_reference": 19
+  },
+  "search_space_size": 1866150,
+  "decision_candidate_catalog_n": 20334,
+  "normalization": {
+    "latency_min": 1.5,
+    "latency_max": 6.0,
+    "loss_min": 0.0,
+    "loss_max": 0.6,
+    "ref_x": 1.02,
+    "ref_y": 1.02
+  },
+  "hypervolume_formula": "2-D minimization HV after affine normalization; no clipping; points at or beyond reference rectangle excluded; exact duplicate objectives removed by nondominated scan"
+}

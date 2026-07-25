@@ -1,0 +1,2 @@
+medoid_scenario_id,top_k,chunk_tokens,overlap,rerank_depth,context_tokens,definition
+47,3.0,384.0,0.23,13.0,2048.0,observed selected profile minimizing total Euclidean distance in midpoint-encoded grid coordinates
