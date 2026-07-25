@@ -63,7 +63,10 @@ pip install -e .
 
 ## Verify the archived release
 
-The full outputs are already included. Run the lightweight checks:
+Compact result summaries, scenario outputs, figures, and statistical
+evidence are tracked in this repository. Candidate-level algorithm runs
+and independent reference samples are distributed as checksum-verified
+GitHub release assets. Run the lightweight checks:
 
 ```bash
 pytest -q
