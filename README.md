@@ -1,5 +1,18 @@
 # SmartTutor Full-Revision Simulation Benchmark
 
+## Camera-ready paper (November 2026)
+
+The latest **eight-page Springer LLNCS SmartTutor short paper** (with revised Figure 1)
+has its [LaTeX entry point and publishing notes](manuscript/SCIN2026_CameraReady_8Page/README.md)
+in this repository.
+
+The [v4.0.0-scin2026-camera-ready release](https://github.com/pmeesad/smarttutor-evolutionary-optimization-scin2026/releases/tag/v4.0.0-scin2026-camera-ready)
+is the **fixed experimental evidence release**. The revised manuscript is supplementary
+to that evidence; the Zenodo deposit [10.5281/zenodo.21582888](https://doi.org/10.5281/zenodo.21582888)
+is unchanged. A complete compiled PDF and self-contained Overleaf ZIP can be attached as
+supplementary release assets without overwriting the original evidence archives.
+
+
 This release is the complete code-and-data evidence package for the full
 revision of the SCIN-2026 manuscript:
 
