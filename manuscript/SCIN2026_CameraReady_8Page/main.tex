@@ -1,0 +1,247 @@
+% SCIN-2026 eight-page short paper (Springer LNCS)
+\documentclass[runningheads]{llncs}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.03}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\artifactrelease}{v4.0.0-scin2026-camera-ready}
+\newcommand{\artifactcommit}{8a40d9a7aa03}
+\newcommand{\artifactdoi}{10.5281/zenodo.21582888}
+
+\begin{document}
+
+\title{Evolutionary Multi-Objective Search for Retrieval-Augmented Tutor Configuration: A Reproducible SmartTutor Simulation Benchmark}
+\titlerunning{Evolutionary Search in a SmartTutor Simulation Benchmark}
+
+\author{Phayung Meesad}
+\authorrunning{P. Meesad}
+
+\institute{Central Library; Department of Information Technology Management, Faculty of Information Technology and Digital Innovation, King Mongkut's University of Technology North Bangkok, Bangkok 10800, Thailand\\
+\email{phayung.m@itd.kmutnb.ac.th}}
+
+\maketitle
+
+\begin{abstract}
+Retrieval-augmented tutors expose coupled configuration choices whose effects on quality, latency, and resource use are difficult to assess jointly. This short paper presents a reproducible simulation benchmark for one SmartTutor architecture; its surrogates are author-designed stress-test models, not calibrated production measurements or human judgments. The feasible mixed-discrete space contains 1,866,150 tuples under the rule that reranking is disabled ($r=0$) or its candidate pool satisfies $r\geq k$. Twelve exact-composition, 1,200-request benchmarks are crossed with ten matched optimizer seeds. Cache-assisted deduplicated NSGA-II (D-NSGA-II), deduplicated SPEA2 (D-SPEA2), LMS+shift-scrambled Sobol sampling, and random search each receive 3,000 unique feasible evaluations per benchmark-seed cell. Against independent 250,000-configuration reference fronts, mean normalized hypervolumes were 0.63608, 0.63604, 0.63278, and 0.63246. Both adaptive variants outperformed both non-adaptive designs in all 120 matched cells, although the relative gain was only about 0.5--0.6\%. A class-protected decision rule improved worst-class quality at higher latency and token work. Across 64 simulator scenarios, several controls occupied bounded regions, while context budget remained weakly identified. The evidence supports adaptive search on the declared synthetic benchmark, not operational SmartTutor improvement.
+
+\keywords{Evolutionary multi-objective optimization \and Retrieval-augmented generation \and Intelligent tutoring \and Simulation benchmark \and Reproducibility}
+\end{abstract}
+
+\section{Introduction}
+
+Retrieval-augmented generation (RAG) lets an AI tutor answer from course-owned evidence, but the service must decide how many candidates to retrieve, how to segment documents, how deeply to rerank, how many chunks to retain, and how much context to pass to the generator. These mixed controls jointly affect evidence coverage, distraction, prompt processing, queueing, and response delay. A single manual setting is therefore difficult to justify when latency, quality, and resource use conflict.
+
+SmartTutor is deployed as \emph{Smart Tutor @Lib KMUTNB} \cite{smarttutorweb} using an Open edX interface, a server-side AI gateway, Qdrant retrieval, optional reranking, bounded context construction, and a local language model. RAG couples generation with retrieved evidence \cite{lewis,dpr}; recent systems adapt retrieval and serving parameters to manage quality-delay trade-offs \cite{metis,rago}, while RAGAs provides automated diagnostics \cite{ragas}. Evolutionary multi-objective search is well suited to this mixed-discrete trade-off problem because population-based selection and variation maintain competing configurations while progressively approximating a diverse Pareto frontier \cite{nsga2,spea2}.
+
+The contribution is not a new optimizer or empirical proof that SmartTutor improves. The contributions are: (i) a fully specified synthetic SmartTutor configuration benchmark; (ii) a matched multi-seed comparison under equal unique-information budgets and independent reference fronts; and (iii) held-out, class-aware policy selection with simulator-scenario sensitivity and a permanently archived reproducibility package.
+
+We ask: (RQ1) do adaptive searches obtain better Pareto approximations under equal unique-evaluation budgets; (RQ2) how do explicit decision rules generalize to held-out benchmarks; and (RQ3) which selected parameter regions remain stable under simulator perturbations?
+
+\section{Problem and Benchmark}
+
+\subsection{System Boundary and Decision Space}
+
+The optimizer is isolated from live learner traffic (Fig.~\ref{fig:architecture}). It proposes configurations only; production use would require telemetry calibration, staging tests, expert assessment, approval, monitoring, and rollback controls.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.94\linewidth]{figures/architecture.png}
+\caption{Production request path and separated offline optimization environment.}
+\label{fig:architecture}
+\end{figure}
+
+A configuration is $x=(k,c,o,r,b)$, where $k$ is retained chunks, $c$ chunk tokens, $o$ overlap, $r$ reranker candidate pool, and $b$ context-token budget. Table~\ref{tab:variables} gives the grids. Feasibility requires $r=0$ or $r\geq k$, yielding
+\[
+|\mathcal{X}|=\left[\sum_{k=2}^{12}(22-k)\right](15)(26)(29)=1{,}866{,}150.
+\]
+
+\begin{table}[t]
+\caption{SmartTutor decision variables and grids.}
+\label{tab:variables}
+\centering
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}cll@{}}
+\toprule
+Var. & Meaning & Grid \\
+\midrule
+$k$ & Retained chunks & $2,\ldots,12$ \\
+$c$ & Tokens per chunk & $128,192,\ldots,1024$ \\
+$o$ & Overlap ratio & $0.05,0.06,\ldots,0.30$ \\
+$r$ & Reranker pool & $0$ or $k,k+1,\ldots,20$ \\
+$b$ & Context budget & $1024,1280,\ldots,8192$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The bi-objective problem is
+\begin{equation}
+\min_{x\in\mathcal{X}}\;\mathbf{F}(x)=
+\left(
+Q_{0.95}\{L_i(x)\}_{i=1}^{N},\;
+1-\frac{1}{N}\sum_{i=1}^{N}q_i(x)
+\right),
+\label{eq:objectives}
+\end{equation}
+where $L_i$ is simulated end-to-end latency and $q_i\in[0,1]$ is surrogate answer quality.
+
+\subsection{Synthetic Requests and Surrogates}
+
+Twelve benchmark realizations use seeds 2026072401--2026072412. Each contains exactly 1,200 requests: 420 factual, 360 procedural, 240 conceptual, and 180 troubleshooting. A latent difficulty variable correlates query length, output length, required context, evidence span, retrievability, index difficulty, and boundary risk. Conditional residuals are independently sampled, clipped to declared bounds, and then frozen; objective evaluation is deterministic within a benchmark.
+
+The quality surrogate combines retrieval coverage, chunk suitability, overlap benefit, reranking gain, context sufficiency, and distraction:
+\begin{equation}
+\begin{aligned}
+q_i=\operatorname{sigmoid}\big[&-1.15+1.55A_i+0.72G_{c,i}+0.50G_{o,i}+0.78V_i\\
+&+1.20C_i+0.42A_iC_i-0.62D_i^*-0.11(s_i-1)\big].
+\end{aligned}
+\label{eq:quality}
+\end{equation}
+Latency is additive and request-interactive:
+\begin{equation}
+L_i=J_i\,[t_{\rm embed}+t_{\rm ret}+t_{\rm rank}+t_{\rm prompt}+t_{\rm TTFT}+t_{\rm gen}+t_{\rm queue}+t_{\rm net}],
+\label{eq:latency}
+\end{equation}
+with retrieval and reranking costs depending on $(k,c,o,r)$, generation on context and output length, and queueing on concurrency and burst load. Token work counts retrieved, reranked, prompt, and output tokens. Complete generation rules, equations, constants, and executable implementations are archived in the public artifact \cite{artifact}.
+
+To test structural sensitivity, a nine-dimensional scrambled Latin-hypercube design \cite{lhs} supplies 64 scenarios. Each scenario multiplies recall, chunk, overlap, reranking, context, distraction, retrieval-token cost, generation load, and queueing terms by values in $[0.70,1.30]$; three chunk-suitability forms are rotated across scenarios. This is an uncertainty analysis, not a confidence region around calibrated coefficients.
+
+\section{Experimental Design}
+
+The experiment crosses 12 benchmarks with ten matched optimizer seeds, giving 120 cells per method. D-NSGA-II and D-SPEA2 use population/environmental-archive size 60, simulated binary crossover probability 0.90, and polynomial mutation probability 0.20 per variable. Duplicate decoded tuples are cached and replaced until a novel feasible proposal is obtained, so D denotes novelty-filtered variants rather than textbook algorithms. Sobol uses SciPy 1.17.0 with $d=5$, \texttt{scramble=True}, \texttt{bits=30}, and \texttt{random\_base2(13)}, retaining unique feasible decodes until 3,000 evaluations; the scramble is LMS+shift \cite{scipy,sobol}. All methods receive exactly 3,000 unique evaluations per cell, although proposal counts and runtime differ. Mean raw proposals were 6,800.8 and 7,909.4 for D-NSGA-II and D-SPEA2; mean cell-wise duplicate rates were 55.8\% and 61.7\%. These are averages of cell-wise ratios, not ratios formed from the reported mean counts. Sobol and random were essentially duplicate-free.
+
+\begin{table}[t]
+\caption{Compact experimental protocol.}
+\label{tab:protocol}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Component & Design \\
+\midrule
+Workload & 12 blocks $\times$ 1,200 exact-composition requests \\
+Search replication & 10 matched optimizer seeds per block \\
+Methods & D-NSGA-II, D-SPEA2, Sobol, random \\
+Information budget & 3,000 unique feasible evaluations per cell \\
+Reference evidence & 250,000 independent configurations per block \\
+Inference & hierarchical bootstrap, Wilcoxon, exact sign-flip, Holm \\
+Policy validation & blocks 1--8 select; blocks 9--12 test \\
+Scenario analysis & 64 fixed-catalog surrogate perturbations \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For each benchmark, an independent LMS+shift Sobol design uses \texttt{random\_base2(19)} and evaluates the first 250,000 unique feasible decodes; its nondominated subset is the primary reference front for IGD+ and additive epsilon \cite{hv,igd,indicators}. Independent 100,000-point and leave-one-method-out fronts provide sensitivity checks. Hypervolume uses fixed affine normalization and a declared reference rectangle.
+
+Inference treats the benchmark as the block and ten seeds as within-block replicates. Seed results are averaged within benchmark before paired Wilcoxon and exact $2^{12}$ sign-flip tests. Hierarchical percentile-bootstrap intervals resample benchmarks and then seeds (10,000 replicates). Holm correction spans 12 one-sided adaptive-versus-non-adaptive comparisons across hypervolume, IGD+, and epsilon \cite{wilcoxon,holm}.
+
+For RQ2, we re-evaluate a catalog of 20,334 unique adaptive-front configurations from training blocks 1--8. Four predeclared rules select: minimum normalized ideal distance; minimum latency subject to weighted quality $\geq0.88$; maximum quality subject to $P_{95}\leq3.25$~s; and minimum latency subject to every class mean $\geq0.81$. Ties use the primary objective, worst-class quality, token work, context budget, then lexicographic order; blocks 9--12 are held out. For RQ3, each scenario rescores the same catalog on blocks 1--8 and selects the minimum-normalized-ideal-distance profile with the same tie breaks; no optimizer is rerun. The medoid minimizes total Euclidean distance after midpoint grid encoding, and Spearman screening uses 64 scenario means.
+
+\section{Results}
+
+\subsection{Search Performance}
+
+Table~\ref{tab:performance} summarizes RQ1. Both adaptive variants outperformed Sobol and random in all 120 matched cells and all 12 seed-averaged blocks on all three indicators. Gains were consistent but small: mean relative hypervolume improvement was about 0.5--0.6\%. The D-NSGA-II--D-SPEA2 hypervolume difference was 0.000039, with hierarchical interval $[-0.000173,0.000254]$. Mean improvements were 0.003298 and 0.003259 over Sobol and 0.003616 and 0.003578 over random. The 120/120 cell wins are descriptive; inference uses 12 block-level paired differences (Holm-adjusted $p=0.00293$ for adaptive-versus-non-adaptive comparisons).
+
+\begin{table}[H]
+\caption{Search performance across 12 benchmarks and ten seeds.}
+\label{tab:performance}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3.3pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & HV [95\% CI] & IGD+ & $\epsilon_+$ & ND size \\
+\midrule
+D-NSGA-II & .636080 [.632024,.640550] & .000155 & .002134 & 383.7 \\
+D-SPEA2 & .636041 [.631853,.640723] & .000135 & .002187 & 398.9 \\
+Sobol & .632782 [.628680,.637329] & .002119 & .006369 & 65.7 \\
+Random & .632464 [.628357,.637129] & .002291 & .006932 & 66.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figures/pareto.png}
+\caption{Representative Pareto approximations (block 7, seed 1) against the independent 250,000-configuration reference front.}
+\label{fig:pareto}
+\end{figure}
+
+The representative front in Fig.~\ref{fig:pareto} shows the expected quality-latency trade-off. Reference-front sensitivity preserved the ordering: for D-NSGA-II, IGD+ was 0.000144, 0.000155, and 0.000189 under independent-100k, independent-250k, and leave-one-method-out-250k references, respectively; corresponding Sobol values were 0.002079, 0.002119, and 0.002159. Hypervolume ordering also remained unchanged under primary, broad, and service-policy normalization schemes.
+
+\subsection{Decision Rules and Scenario Findings}
+
+Table~\ref{tab:decisions} answers RQ2. The ideal-point rule selected $(3,384,0.22,13,1024)$, with held-out $P_{95}=3.0664$~s and weighted quality 0.8725. The class-protected rule increased worst-class quality from 0.7775 to 0.8075, but increased latency by 0.080~s and token work by 27.7\%. Thus, aggregate quality alone is an insufficient institutional approval gate.
+
+\begin{table}[t]
+\caption{Held-out performance of predeclared decision rules.}
+\label{tab:decisions}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.9pt}
+\begin{tabular}{@{}lcrrrrr@{}}
+\toprule
+Rule & $(k,c,o,r,b)$ & $P_{95}$ (s) & $q_w$ & $q_{\mathrm{macro}}$ & $q_{\mathrm{worst}}$ & Token work \\
+\midrule
+Ideal & $(3,384,.22,13,1024)$ & 3.066 & .8725 & .8578 & .7775 & 12606 \\
+$q_w\geq.88$ & $(3,384,.25,15,1024)$ & 3.099 & .8791 & .8658 & .7934 & 14475 \\
+$P_{95}\leq3.25$ & $(4,384,.19,18,1024)$ & 3.244 & .8993 & .8879 & .8256 & 17055 \\
+Class protected & $(3,384,.22,17,1024)$ & 3.146 & .8863 & .8740 & .8075 & 16102 \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}
+{\scriptsize\emph{Note.} Rule labels are training constraints; held-out values may violate them.
+$q_w$: request-weighted class mean; $q_{\mathrm{macro}}$: unweighted four-class mean;
+$q_{\mathrm{worst}}$: minimum class mean; token work: mean processed tokens/request.}
+\end{table}
+
+For RQ3, selected profiles across 64 scenarios had $k=2$--4, chunk size 320--384, overlap 0.17--0.30, reranking depth 11--18, and context budget 1024--6912. Chunk size was concentrated at 384 in 56/64 scenarios; context budget remained weakly identified. The scenario medoid was $(3,384,0.23,13,2048)$. Generation throughput had the strongest marginal association with latency ($\rho=-0.990$), while recall weight had the strongest association with quality ($\rho=0.624$). These are marginal rank associations, not causal effects.
+
+Class-level diagnostics explain the governance implication. The ideal rule achieved factual, procedural, conceptual, and troubleshooting qualities of 0.9041, 0.8954, 0.8543, and 0.7775. Against a predeclared heuristic, it improved factual and procedural quality but reduced conceptual and troubleshooting quality. Exact class counts reconcile the weighted mean and show why macro- and worst-class metrics are necessary.
+
+\section{Discussion, Validity, and Conclusion}
+
+The answer to RQ1 is positive only for the declared synthetic benchmark: adaptive methods formed slightly better Pareto approximations than the implemented non-adaptive designs under equal unique-information budgets. The high duplicate rates mean the result applies to deduplicated variants, not textbook algorithms under equal proposal or runtime budgets. RQ2 is conditional on the candidate catalog, thresholds, normalization, and tie-breaking rules; different governance goals select different policies. RQ3 is partial: chunk size and reranking were relatively concentrated, whereas overlap and context budget were more sensitive.
+
+The main construct limitation is decisive: quality is a hand-designed surrogate, not factual correctness, groundedness, instructional value, or learning gain, and latency is uncalibrated to a specific model, index, GPU, or queue. Internal validity is strengthened by exact class counts, ten matched seeds, independent references, unique-evaluation accounting, and deterministic selection; remaining risks include one implementation, fixed operators, novelty filtering, and approximate fronts. External validity is limited to one request mixture, simulator family, and SmartTutor architecture.
+
+Accordingly, the result should guide \emph{offline} design rather than direct deployment. A real-system study should calibrate stage equations from staging telemetry, compare simulated and observed configuration rankings, obtain expert ratings for retrieval, faithfulness, citations, and instructional quality, enforce class and service margins, and use human approval with rollback.
+
+In conclusion, D-NSGA-II and D-SPEA2 produced small but consistent gains over Sobol and random search across 12 benchmarks and ten matched seeds; their hypervolume difference was 0.000039, with the reported interval spanning zero. Decision rules exposed a measurable trade-off between weighted quality and weakest-class protection, while scenario analysis showed that model assumptions materially affect selected controls. The next evidence step is staged empirical calibration, not automatic production deployment.
+
+\subsubsection{Data, Ethics, and Reproducibility Statement}
+Because the study used only synthetic data and involved no human participants or identifiable personal information, no human-subject ethics application was submitted. Source code, fixed benchmarks, 120 matched cells per method, independent reference samples, scenario outputs, and checksums are available in GitHub release \texttt{\artifactrelease} and permanently archived in Zenodo \cite{artifact}. The release corresponds to Git commit \texttt{\artifactcommit}.
+
+\begin{thebibliography}{18}
+\bibitem{smarttutorweb} Central Library, King Mongkut's University of Technology North Bangkok: Smart Tutor @Lib KMUTNB. \url{https://smarttutor.lib.kmutnb.ac.th/}. Last accessed 25 Jul 2026
+\bibitem{lewis} Lewis, P., et al.: Retrieval-augmented generation for knowledge-intensive NLP tasks. In: NeurIPS 2020, vol. 33, pp. 9459--9474 (2020)
+\bibitem{dpr} Karpukhin, V., et al.: Dense passage retrieval for open-domain question answering. In: EMNLP 2020, pp. 6769--6781 (2020). \doi{10.18653/v1/2020.emnlp-main.550}
+\bibitem{metis} Ray, S., et al.: METIS: Fast quality-aware RAG systems with configuration adaptation. In: SOSP 2025, pp. 606--622 (2025). \doi{10.1145/3731569.3764855}
+\bibitem{rago} Jiang, W., et al.: RAGO: Systematic performance optimization for retrieval-augmented generation serving. In: ISCA 2025, pp. 974--989 (2025). \doi{10.1145/3695053.3731093}
+\bibitem{ragas} Es, S., James, J., Espinosa-Anke, L., Schockaert, S.: RAGAs: Automated evaluation of retrieval augmented generation. In: EACL 2024 System Demonstrations, pp. 150--158 (2024). \doi{10.18653/v1/2024.eacl-demo.16}
+\bibitem{nsga2} Deb, K., Pratap, A., Agarwal, S., Meyarivan, T.: A fast and elitist multiobjective genetic algorithm: NSGA-II. IEEE Trans. Evol. Comput. \textbf{6}(2), 182--197 (2002). \doi{10.1109/4235.996017}
+\bibitem{spea2} Zitzler, E., Laumanns, M., Thiele, L.: SPEA2: Improving the Strength Pareto Evolutionary Algorithm. TIK Report 103, ETH Zurich (2001)
+\bibitem{lhs} McKay, M.D., Beckman, R.J., Conover, W.J.: A comparison of three methods for selecting values of input variables in the analysis of output from a computer code. Technometrics \textbf{21}(2), 239--245 (1979). \doi{10.1080/00401706.1979.10489755}
+\bibitem{hv} Zitzler, E., Thiele, L.: Multiobjective evolutionary algorithms: A comparative case study and the strength Pareto approach. IEEE Trans. Evol. Comput. \textbf{3}(4), 257--271 (1999). \doi{10.1109/4235.797969}
+\bibitem{igd} Ishibuchi, H., Masuda, H., Tanigaki, Y., Nojima, Y.: Modified distance calculation in generational distance and inverted generational distance. In: EMO 2015, LNCS, vol. 9019, pp. 110--125. Springer (2015). \doi{10.1007/978-3-319-15892-1_8}
+\bibitem{indicators} Zitzler, E., Thiele, L., Laumanns, M., Fonseca, C.M., da Fonseca, V.G.: Performance assessment of multiobjective optimizers: An analysis and review. IEEE Trans. Evol. Comput. \textbf{7}(2), 117--132 (2003). \doi{10.1109/TEVC.2003.810758}
+\bibitem{sobol} Sobol, I.M.: On the distribution of points in a cube and approximate evaluation of integrals. USSR Comput. Math. Math. Phys. \textbf{7}(4), 86--112 (1967). \doi{10.1016/0041-5553(67)90144-9}
+\bibitem{scipy} SciPy Developers: \texttt{scipy.stats.qmc.Sobol}, SciPy 1.17.0. \url{https://docs.scipy.org/doc/scipy-1.17.0/reference/generated/scipy.stats.qmc.Sobol.html}. Last accessed 25 Jul 2026
+\bibitem{wilcoxon} Wilcoxon, F.: Individual comparisons by ranking methods. Biometrics Bull. \textbf{1}(6), 80--83 (1945). \doi{10.2307/3001968}
+\bibitem{holm} Holm, S.: A simple sequentially rejective multiple test procedure. Scand. J. Stat. \textbf{6}(2), 65--70 (1979)
+\bibitem{artifact} Meesad, P.: SmartTutor evolutionary multi-objective configuration-search software, synthetic benchmarks, and experimental evidence, version 4.0.0. Zenodo (2026). \doi{\artifactdoi}
+\end{thebibliography}
+
+\end{document}
